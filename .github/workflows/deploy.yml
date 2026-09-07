@@ -33,14 +33,14 @@ jobs:
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
-          username: root
+          username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /opt/mentoring/rag-service
             # Только секреты. Имя модели, base URL, top_k и т.д.
             # — дефолты из app/config.py.
             cat > .env << 'EOF'
-            LLM_API_KEY=${{ secrets.LLM_API_KEY }}
+            GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}
             QDRANT_URL=http://qdrant:6333
             EOF
             docker compose pull app
