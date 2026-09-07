@@ -1,0 +1,7 @@
+curl -X POST https://api.groq.com/openai/v1/chat/completions \
+  -H "Authorization: Bearer ${GROQ_API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "qwen/qwen3.6-27b",
+    "messages": [{"role": "user", "content": "Say hello in one short sentence"}]
+  }'
