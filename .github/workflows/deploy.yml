@@ -21,6 +21,7 @@ jobs:
           # дефолты из app/config.py, общие для CI / локали / прода.
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           QDRANT_URL: http://localhost:6333
+  
 
   deploy:
     needs: test
@@ -29,6 +30,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       # ... существующие шаги build + push в GHCR из недели 6
+      - name: Prepare image name
+        run: |
+          OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "IMAGE=ghcr.io/$OWNER_LOWER/rag-service" >> $GITHUB_ENV
+
+      - name: Log in to GHCR
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: ${{ github.event_name == 'push' }}
+          tags: |
+            ${{ env.IMAGE }}:${{ github.sha }}
+            ${{ env.IMAGE }}:latest
+      #
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1
         with:
