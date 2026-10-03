@@ -74,12 +74,9 @@ docker-compose.yml     app + qdrant
 авторизация — `Authorization: Bearer <LLM_API_KEY>`, где ключ — API-ключ сервисного аккаунта
 Yandex Cloud (или IAM-токен). В URI модели `<folder_id>` — идентификатор твоего каталога.
 
-Сменить провайдера можно парой переменных — подойдёт любой OpenAI-совместимый API. Например, Groq:
-
-```bash
-LLM_BASE_URL=https://api.groq.com/openai/v1
-LLM_MODEL=openai/gpt-oss-120b
-```
+Провайдер задаётся парой переменных, поэтому при необходимости его легко сменить на любой
+другой OpenAI-совместимый API — достаточно переопределить `LLM_BASE_URL` и `LLM_MODEL`
+в `.env` или в секретах деплоя.
 
 Проверка провайдера без запуска сервиса (тот же путь, что и в приложении):
 
@@ -135,12 +132,11 @@ LLM_API_KEY=test pytest tests/ -v
 | Метрика | Значение |
 |---|---|
 | recall@4 (retriever) | 1.00 |
-| faithfulness | 0.89 |
-| answer_relevancy | 0.69 |
+| faithfulness | 0.78 |
+| answer_relevancy | 0.95 |
 
-Сырые замеры — `notebooks/rag_metrics.json` (эмбеддер `intfloat/multilingual-e5-small`,
-`top_k = 4`). Замеры сняты на модели `openai/gpt-oss-120b` (Groq) — то есть до перехода на
-Yandex AI Studio, поэтому после смены провайдера метрики стоит перемерить.
+Сырые замеры — `notebooks/rag_metrics.json` (модель `gpt://<folder_id>/yandexgpt-5-lite`,
+эмбеддер `intfloat/multilingual-e5-small`, `top_k = 4`).
 
 ## CI/CD
 
