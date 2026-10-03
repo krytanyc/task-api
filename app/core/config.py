@@ -10,11 +10,11 @@ class Settings(BaseSettings):
     )
 
     # Только секрет — без default, контейнер падает если не задан.
-    llm_api_key: str = Field(validation_alias="GROQ_API_KEY")
+    llm_api_key: str 
 
     # Groq совместим с OpenAI API; значения можно переопределить через .env.
-    llm_base_url: str = "https://api.groq.com/openai/v1"
-    llm_model: str = "openai/gpt-oss-120b"
+    llm_base_url: str = "https://llm.api.cloud.yandex.net/v1"
+    llm_model: str = "gpt://b1gqeb7j1sefk9u2jehe/yandexgpt-5-lite"
     llm_temperature: float = 0.0
 
     # Vector store

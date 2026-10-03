@@ -1,50 +1,139 @@
-# task-api: ML-эндпоинт для классификации вина
+# RAG-сервис: ассистент по документации scikit-learn
 
-Сервис на FastAPI + Gradio, который по 13 химическим показателям партии вина определяет сорт винограда (`class_0`, `class_1`, `class_2`). Принимает запросы как через REST (JSON), так и через браузерный Gradio-интерфейс.
+Сервис на FastAPI + Gradio, который отвечает на вопросы по документации scikit-learn
+(линейные модели, решающие деревья, метрики) на русском и английском языке, опираясь
+только на найденные в Qdrant чанки и цитируя источники как `[1]`, `[2]`.
 
-- **Live demo:** https://<ваш-поддомен>.nip.io/
-- **Swagger UI:** https://<ваш-поддомен>.nip.io/docs
-- **Health-check:** https://<ваш-поддомен>.nip.io/health
+- **Gradio UI:** `GET /` — чат, панель таймингов (retrieval / TTFT / LLM) и панель источников
+- **REST:** `POST /chat` — вопрос → ответ + список источников
+- **Health-check:** `GET /health`
 
-## Что внутри
-
-- `wine_train_practice.ipynb` + `wine_train_solution.ipynb` (из материалов недели, обучаются отдельно от репозитория) — обучение `DecisionTreeClassifier` на `sklearn.datasets.load_wine` с label noise 15% в train, подбор регуляризации (`max_depth=4`) через `GridSearchCV`. Регуляризация поднимает test accuracy с 0.76 (baseline) до 0.83 и сжимает train/test gap с 0.24 до 0.10
-- `app/main.py` — FastAPI с lifespan-загрузкой модели + REST `/predict` + смонтированный Gradio на корневом пути `/`
-- `models/wine_model.pkl` — сериализованный `DecisionTreeClassifier`. В git не хранится, собирается ноутбуком
-- `tests/` — pytest-тесты на REST-эндпоинт и Gradio-роут
-- `Dockerfile` + `.github/workflows/` — CI/CD, автодеплой на VPS через GHCR + SSH
-
-## Архитектура
+## Как это работает
 
 ```mermaid
 flowchart LR
-    Browser[Browser] -->|GET /| Gradio[Gradio UI]
-    Client[Programmatic client] -->|POST /predict| REST[FastAPI REST]
-    Gradio -->|joblib.load| Model
-    REST -->|joblib.load| Model
-    Model[wine_model.pkl]
+    Client[Браузер или клиент] -->|POST /chat| API[FastAPI]
+    Client -->|GET /| Gradio[Gradio UI]
+    API --> Chain[LCEL-цепочка]
+    Gradio --> Chain
+    Chain -->|embed: multilingual-e5-small| Q[(Qdrant: sklearn_docs)]
+    Q -->|top_k = 4 чанка| Chain
+    Chain -->|prompt + context| LLM[LLM: OpenAI-совместимый endpoint]
+    LLM --> Answer[Ответ + цитаты + источники]
 ```
 
-## Как запустить локально
+1. **Загрузка корпуса** — `app/scripts/load_corpus.py` обходит три раздела документации
+   scikit-learn (`linear_model`, `tree`, `model_evaluation`, `max_depth=1`), чистит HTML,
+   добавляет локальные `data/local/*.md` и режет всё на чанки по 1000 символов
+   с overlap 200 → `data/corpus_chunks.jsonl`.
+2. **Индексация** — `app/scripts/index_corpus.py` пересоздаёт коллекцию `sklearn_docs`,
+   считает эмбеддинги `intfloat/multilingual-e5-small` (384, косинус), кладёт чанки
+   в Qdrant и прогоняет три sanity-запроса (EN / RU / meta-вопрос).
+3. **Цепочка** — `app/rag/chain.py`: LCEL `retriever → prompt → LLM → parser`.
+   Контекст собирается с нумерацией источников, промпт требует отвечать на языке вопроса
+   и не выходить за пределы контекста.
+4. **Сервис** — `app/main.py`: FastAPI с `lifespan`-инициализацией цепочки, REST `/chat`
+   с обработкой недоступности LLM (503), `/health` и смонтированный на `/` Gradio-чат
+   со стримингом ответа.
+
+## Структура
+
+```
+app/
+  main.py              FastAPI + Gradio UI (стриминг, тайминги, источники)
+  llm.py               ChatOpenAI-клиент (OpenAI-совместимый endpoint)
+  core/config.py       Settings (pydantic-settings, читает .env)
+  rag/chain.py         LCEL-цепочка + retriever
+  schemas/chat.py      ChatRequest / ChatResponse / Source
+  scripts/             load_corpus.py, index_corpus.py
+tests/                 pytest: /health и /chat с замоканной цепочкой
+notebooks/             rag_eval.ipynb + rag_metrics.json (RAGAS-оценка)
+data/local/            внутренние .md-документы (about this assistant)
+docker-compose.yml     app + qdrant
+```
+
+## Настройки (`.env`)
+
+| Переменная | Обязательна | Значение по умолчанию |
+|---|---|---|
+| `LLM_API_KEY` | да | — (без неё сервис падает на валидации `Settings`) |
+| `LLM_BASE_URL` | нет | `https://llm.api.cloud.yandex.net/v1` |
+| `LLM_MODEL` | нет | `gpt://b1gqeb7j1sefk9u2jehe/yandexgpt-5-lite` |
+| `LLM_TEMPERATURE` | нет | `0.0` |
+| `QDRANT_URL` | нет | `http://qdrant:6333` (локально удобнее `http://localhost:6333`) |
+| `COLLECTION_NAME` | нет | `sklearn_docs` |
+| `TOP_K` | нет | `4` |
+| `EMBEDDING_MODEL` | нет | `intfloat/multilingual-e5-small` |
+| `EMBEDDING_DIM` | нет | `384` |
+| `NORMALIZE_EMBEDDINGS` | нет | `true` |
+
+Провайдер LLM задаётся парой `LLM_BASE_URL` + `LLM_MODEL` (любой OpenAI-совместимый API).
+
+## Запуск локально
 
 ```bash
-conda create -n task-api python=3.11 -y
-conda activate task-api
+python -m venv .venv && source .venv/bin/activate    # или conda create -n task-api python=3.11
 pip install -r requirements.txt
 
-# 1) убедитесь, что обученная модель лежит в models/wine_model.pkl
-#    (её обучает отдельный ноутбук на Шаге 1 и копирует в models/ Шаг 7)
+# 1) Qdrant: поднимаем только векторную БД из compose
+docker compose up -d qdrant
 
-# 2) запускаем сервис
+# 2) ключ и адрес Qdrant для локального запуска
+export LLM_API_KEY=...
+export QDRANT_URL=http://localhost:6333
+
+# 3) корпус и индекс (нужно один раз, индекс пересоздаётся с нуля)
+python -m app.scripts.load_corpus
+python -m app.scripts.index_corpus
+
+# 4) сервис
 uvicorn app.main:app --reload
 ```
 
-Откройте `http://127.0.0.1:8000/` для Gradio, `http://127.0.0.1:8000/docs` для Swagger.
+Gradio — `http://127.0.0.1:8000/`, Swagger — `http://127.0.0.1:8000/docs`.
 
-## Скриншот
+## Docker
 
-![Gradio-интерфейс](screenshots/06_gradio_blocks_with_examples.jpg)
+```bash
+docker compose up --build
+```
+
+`app` собирается из `Dockerfile` (`python:3.11-slim`, запуск `uvicorn app.main:app`),
+том `./qdrant_data` хранит данные Qdrant.
+
+## Тесты
+
+```bash
+LLM_API_KEY=test pytest tests/ -v
+```
+
+`tests/conftest.py` подставляет тестовый ключ и мокает `build_rag_chain`, поэтому тесты
+не обращаются ни к Qdrant, ни к эмбеддеру, ни к LLM.
+
+## Качество ответов
+
+`notebooks/rag_eval.ipynb` — RAGAS-оценка на 10 вопросах по темам корпуса:
+
+| Метрика | Значение |
+|---|---|
+| recall@4 (retriever) | 1.00 |
+| faithfulness | 0.89 |
+| answer_relevancy | 0.69 |
+
+Сырые замеры — `notebooks/rag_metrics.json` (модель `openai/gpt-oss-120b`, эмбеддер
+`intfloat/multilingual-e5-small`, `top_k = 4`).
+
+## CI/CD
+
+- `.github/workflows/ci.yml` — на pull request и push в `main`: `pytest tests/ -v` и сборка
+  Docker-образа.
+- `.github/workflows/deploy.yml` — сборка образа в GHCR (`ghcr.io/<owner>/rag-service`)
+  и деплой на VPS в `/opt/mentoring/rag-service`: перезапись `.env`, `docker compose pull app`,
+  `docker compose up -d app`.
+- Секреты репозитория: `LLM_API_KEY`, `SERVER_HOST`, `SERVER_USER`, `SSH_PRIVATE_KEY`, `GHCR_TOKEN`.
 
 ## Стек
 
-Python 3.11 · FastAPI · Pydantic v2 · scikit-learn 1.6 · Gradio 5 · pytest · Docker · GitHub Actions · GHCR · nginx · Let's Encrypt
+Python 3.11 · FastAPI · Pydantic v2 · LangChain (LCEL) · langchain-qdrant · Qdrant ·
+sentence-transformers (`multilingual-e5-small`) · Gradio 5 · RAGAS · pytest · Docker ·
+GitHub Actions · GHCR

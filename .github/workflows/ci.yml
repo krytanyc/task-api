@@ -24,7 +24,7 @@ jobs:
         # production setting while importing the application.
         run: pytest tests/ -v
         env:
-          GROQ_API_KEY: test-groq-api-key
+          LLM_API_KEY: test-api-key
 
   build-image:
     runs-on: ubuntu-latest
