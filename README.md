@@ -60,6 +60,7 @@ docker-compose.yml     app + qdrant
 | `LLM_BASE_URL` | нет | `https://llm.api.cloud.yandex.net/v1` |
 | `LLM_MODEL` | нет | `gpt://b1gqeb7j1sefk9u2jehe/yandexgpt-5-lite` |
 | `LLM_TEMPERATURE` | нет | `0.0` |
+| `LLM_MAX_TOKENS` | нет | `4000` |
 | `QDRANT_URL` | нет | `http://qdrant:6333` (локально удобнее `http://localhost:6333`) |
 | `COLLECTION_NAME` | нет | `sklearn_docs` |
 | `TOP_K` | нет | `4` |
@@ -132,7 +133,7 @@ LLM_API_KEY=test pytest tests/ -v
 | Метрика | Значение |
 |---|---|
 | recall@4 (retriever) | 1.00 |
-| faithfulness | 0.78 |
+| faithfulness | 0.85 |
 | answer_relevancy | 0.95 |
 
 Сырые замеры — `notebooks/rag_metrics.json` (модель `gpt://<folder_id>/yandexgpt-5-lite`,

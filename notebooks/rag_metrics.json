@@ -8,7 +8,7 @@
     "hits": 10
   },
   "generation": {
-    "faithfulness": 0.7777777777777778,
-    "answer_relevancy": 0.9452752312650027
+    "faithfulness": 0.85,
+    "answer_relevancy": 0.9452271122759116
   }
 }

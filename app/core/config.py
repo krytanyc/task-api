@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     llm_base_url: str = "https://llm.api.cloud.yandex.net/v1"
     llm_model: str = "gpt://b1gqeb7j1sefk9u2jehe/yandexgpt-5-lite"
     llm_temperature: float = 0.0
+    # Максимум токенов в ответе. Без него Yandex режет генерацию своим дефолтом,
+    # и длинные ответы (например, JSON со списком утверждений в RAGAS-метрике
+    # Faithfulness) обрываются с LLMDidNotFinishException.
+    llm_max_tokens: int = 4000
 
     # Vector store
     qdrant_url: str = "http://qdrant:6333"
