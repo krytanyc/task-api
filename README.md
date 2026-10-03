@@ -22,10 +22,13 @@ flowchart LR
     LLM --> Answer[Ответ + цитаты + источники]
 ```
 
-1. **Загрузка корпуса** — `app/scripts/load_corpus.py` обходит три раздела документации
-   scikit-learn (`linear_model`, `tree`, `model_evaluation`, `max_depth=1`), чистит HTML,
-   добавляет локальные `data/local/*.md` и режет всё на чанки по 1000 символов
-   с overlap 200 → `data/corpus_chunks.jsonl`.
+1. **Загрузка корпуса** — `app/scripts/load_corpus.py` обходит 10 разделов документации
+   scikit-learn (`linear_model`, `tree`, `model_evaluation`, `ensemble`, `cross_validation`,
+   `preprocessing`, `compose`, `grid_search`, `impute`, `feature_selection`, `max_depth=1`),
+   чистит HTML, добавляет локальные `data/local/*.md` (например, `about.md` — описание самого
+   ассистента) и режет всё на чанки по 1000 символов с overlap 200 →
+   `data/corpus_chunks.jsonl` (файл генерируется скриптом и в git не хранится).
+   В текущей сборке: 11 страниц → 559 чанков.
 2. **Индексация** — `app/scripts/index_corpus.py` пересоздаёт коллекцию `sklearn_docs`,
    считает эмбеддинги `intfloat/multilingual-e5-small` (384, косинус), кладёт чанки
    в Qdrant и прогоняет три sanity-запроса (EN / RU / meta-вопрос).
@@ -128,16 +131,46 @@ LLM_API_KEY=test pytest tests/ -v
 
 ## Качество ответов
 
-`notebooks/rag_eval.ipynb` — RAGAS-оценка на 10 вопросах по темам корпуса:
+`notebooks/rag_eval.ipynb` — RAGAS-оценка на 18 вопросах (13 EN + 4 RU + 1 meta) по всем
+10 разделам корпуса:
 
 | Метрика | Значение |
 |---|---|
-| recall@4 (retriever) | 1.00 |
-| faithfulness | 0.85 |
+| recall@4 (retriever) | 1.00 (18/18) |
+| faithfulness | 0.88 |
 | answer_relevancy | 0.95 |
 
 Сырые замеры — `notebooks/rag_metrics.json` (модель `gpt://<folder_id>/yandexgpt-5-lite`,
 эмбеддер `intfloat/multilingual-e5-small`, `top_k = 4`).
+
+Ноутбук удобно прогонять целиком, не открывая Jupyter:
+
+```bash
+jupyter nbconvert --to notebook --execute --inplace \
+  --ExecutePreprocessor.kernel_name=task-api notebooks/rag_eval.ipynb
+```
+
+## Обновление корпуса
+
+`data/corpus_chunks.jsonl` и сама коллекция Qdrant в git не хранятся, поэтому после правки
+`SEED_URLS` в `app/scripts/load_corpus.py` или локальных `data/local/*.md` корпус нужно
+пересобрать и переиндексировать:
+
+```bash
+# локально (Qdrant поднимается через docker compose up -d qdrant)
+python -m app.scripts.load_corpus
+python -m app.scripts.index_corpus
+
+# на сервере — те же команды внутри контейнера, затем перезапуск приложения,
+# чтобы retriever работал с пересозданной коллекцией
+docker compose exec -T app python -m app.scripts.load_corpus
+docker compose exec -T app python -m app.scripts.index_corpus
+docker compose restart app
+```
+
+`index_corpus.py` пересоздаёт коллекцию `sklearn_docs` с нуля, поэтому шаг идемпотентен:
+повторный запуск даёт то же состояние. Эмбеддер кэшируется в docker-volume `hf_cache`,
+так что модель не скачивается заново при каждом прогоне.
 
 ## CI/CD
 

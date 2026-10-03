@@ -1,14 +1,14 @@
 {
-  "n_questions": 10,
+  "n_questions": 18,
   "model": "gpt://b1gqeb7j1sefk9u2jehe/yandexgpt-5-lite",
   "embedding_model": "intfloat/multilingual-e5-small",
   "top_k": 4,
   "retriever": {
     "recall_at_4": 1.0,
-    "hits": 10
+    "hits": 18
   },
   "generation": {
-    "faithfulness": 0.85,
-    "answer_relevancy": 0.9452271122759116
+    "faithfulness": 0.8777777777777778,
+    "answer_relevancy": 0.9479282812431725
   }
 }

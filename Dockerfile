@@ -12,6 +12,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Копируем папку app/ внутрь контейнера в /app/app
 COPY app ./app
 
+# Локальная часть корпуса (data/local/*.md) — нужна, если индексировать
+# корпус прямо в контейнере: python -m app.scripts.load_corpus && index_corpus.
+# data/corpus_chunks.jsonl сюда не копируем — он генерируется скриптом.
+COPY data/local ./data/local
+
 # Не буферизовать stdout — иначе логи могут "застрять" и не попасть в docker logs
 ENV PYTHONUNBUFFERED=1
 # Документируем, что контейнер слушает порт 8000 (метаданные для других инструментов)
