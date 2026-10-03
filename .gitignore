@@ -217,3 +217,8 @@ qdrant_data/
 # Streamlit
 .streamlit/secrets.toml
 data/corpus_chunks.jsonl
+
+# Локальный мусор: вложенный клон проекта, runtime-папка Gradio, черновики в редакторе
+rag-service/
+.gradio/
+Untitled

@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 
 # Avoid starting Qdrant, downloading embeddings, or calling an LLM in unit tests.
 # The production configuration is intentionally still validated at import time.
-os.environ.setdefault("GROQ_API_KEY", "test-groq-api-key")
+os.environ.setdefault("LLM_API_KEY", "test-api-key")
 from app.main import app
 
 
