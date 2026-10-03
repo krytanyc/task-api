@@ -22,10 +22,12 @@ flowchart LR
     LLM --> Answer[Ответ + цитаты + источники]
 ```
 
-1. **Загрузка корпуса** — `app/scripts/load_corpus.py` обходит три раздела документации
-   scikit-learn (`linear_model`, `tree`, `model_evaluation`, `max_depth=1`), чистит HTML,
-   добавляет локальные `data/local/*.md` и режет всё на чанки по 1000 символов
-   с overlap 200 → `data/corpus_chunks.jsonl`.
+1. **Загрузка корпуса** — `app/scripts/load_corpus.py` обходит 10 разделов документации
+   scikit-learn (`linear_model`, `tree`, `model_evaluation`, `ensemble`, `cross_validation`,
+   `preprocessing`, `compose`, `grid_search`, `impute`, `feature_selection`, `max_depth=1`),
+   чистит HTML, добавляет локальные `data/local/*.md` (например, `about.md` — описание самого
+   ассистента) и режет всё на чанки по 1000 символов с overlap 200 →
+   `data/corpus_chunks.jsonl` (файл генерируется скриптом и в git не хранится).
 2. **Индексация** — `app/scripts/index_corpus.py` пересоздаёт коллекцию `sklearn_docs`,
    считает эмбеддинги `intfloat/multilingual-e5-small` (384, косинус), кладёт чанки
    в Qdrant и прогоняет три sanity-запроса (EN / RU / meta-вопрос).
@@ -138,6 +140,10 @@ LLM_API_KEY=test pytest tests/ -v
 
 Сырые замеры — `notebooks/rag_metrics.json` (модель `gpt://<folder_id>/yandexgpt-5-lite`,
 эмбеддер `intfloat/multilingual-e5-small`, `top_k = 4`).
+
+Golden-набор пока покрывает три базовые темы. После расширения корпуса до 10 разделов
+метрики имеет смысл перемерить и дополнить набор вопросами по ensembles / pipelines /
+imputation.
 
 ## CI/CD
 
