@@ -12,7 +12,8 @@ class Settings(BaseSettings):
     # Только секрет — без default, контейнер падает если не задан.
     llm_api_key: str 
 
-    # Groq совместим с OpenAI API; значения можно переопределить через .env.
+    # Yandex AI Studio (YandexGPT) отдаёт OpenAI-совместимый API, поэтому ходим
+    # через ChatOpenAI. Значения можно переопределить через .env.
     llm_base_url: str = "https://llm.api.cloud.yandex.net/v1"
     llm_model: str = "gpt://b1gqeb7j1sefk9u2jehe/yandexgpt-5-lite"
     llm_temperature: float = 0.0

@@ -67,7 +67,25 @@ docker-compose.yml     app + qdrant
 | `EMBEDDING_DIM` | нет | `384` |
 | `NORMALIZE_EMBEDDINGS` | нет | `true` |
 
-Провайдер LLM задаётся парой `LLM_BASE_URL` + `LLM_MODEL` (любой OpenAI-совместимый API).
+### Провайдер LLM
+
+По умолчанию сервис работает через **Yandex AI Studio** (YandexGPT 5 Lite):
+`LLM_BASE_URL=https://llm.api.cloud.yandex.net/v1`, `LLM_MODEL=gpt://<folder_id>/yandexgpt-5-lite`,
+авторизация — `Authorization: Bearer <LLM_API_KEY>`, где ключ — API-ключ сервисного аккаунта
+Yandex Cloud (или IAM-токен). В URI модели `<folder_id>` — идентификатор твоего каталога.
+
+Сменить провайдера можно парой переменных — подойдёт любой OpenAI-совместимый API. Например, Groq:
+
+```bash
+LLM_BASE_URL=https://api.groq.com/openai/v1
+LLM_MODEL=openai/gpt-oss-120b
+```
+
+Проверка провайдера без запуска сервиса (тот же путь, что и в приложении):
+
+```bash
+python -c "from app.llm import get_llm; print(get_llm().invoke('Ответь одним словом: работает?'))"
+```
 
 ## Запуск локально
 
@@ -120,8 +138,9 @@ LLM_API_KEY=test pytest tests/ -v
 | faithfulness | 0.89 |
 | answer_relevancy | 0.69 |
 
-Сырые замеры — `notebooks/rag_metrics.json` (модель `openai/gpt-oss-120b`, эмбеддер
-`intfloat/multilingual-e5-small`, `top_k = 4`).
+Сырые замеры — `notebooks/rag_metrics.json` (эмбеддер `intfloat/multilingual-e5-small`,
+`top_k = 4`). Замеры сняты на модели `openai/gpt-oss-120b` (Groq) — то есть до перехода на
+Yandex AI Studio, поэтому после смены провайдера метрики стоит перемерить.
 
 ## CI/CD
 
@@ -130,7 +149,7 @@ LLM_API_KEY=test pytest tests/ -v
 - `.github/workflows/deploy.yml` — сборка образа в GHCR (`ghcr.io/<owner>/rag-service`)
   и деплой на VPS в `/opt/mentoring/rag-service`: перезапись `.env`, `docker compose pull app`,
   `docker compose up -d app`.
-- Секреты репозитория: `LLM_API_KEY`, `SERVER_HOST`, `SERVER_USER`, `SSH_PRIVATE_KEY`, `GHCR_TOKEN`.
+- Секреты репозитория: `LLM_API_KEY` (API-ключ сервисного аккаунта Yandex Cloud), `SERVER_HOST`, `SERVER_USER`, `SSH_PRIVATE_KEY`, `GHCR_TOKEN`.
 
 ## Стек
 
