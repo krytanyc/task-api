@@ -33,3 +33,8 @@ services:
     networks:
       - mentoring-net
     restart: unless-stopped
+
+volumes:
+  # Именованный том, который монтируется в app (см. services.app.volumes).
+  # Без объявления здесь Compose падает: "refers to undefined volume hf_cache".
+  hf_cache:
