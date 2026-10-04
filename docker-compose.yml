@@ -5,6 +5,10 @@ networks:
 
 services:
   app:
+    # Локально: docker compose up --build собирает образ из исходников.
+    # На сервере: docker compose pull app тянет готовый образ из GHCR —
+    # именно так его обновляет .github/workflows/deploy.yml.
+    image: ghcr.io/krytanyc/rag-service:latest
     build: .
     container_name: rag-app
     ports:
