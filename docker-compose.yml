@@ -5,6 +5,10 @@ networks:
 
 services:
   app:
+    # Локально: docker compose up --build собирает образ из исходников.
+    # На сервере: docker compose pull app тянет готовый образ из GHCR —
+    # именно так его обновляет .github/workflows/deploy.yml.
+    image: ghcr.io/krytanyc/rag-service:latest
     build: .
     container_name: rag-app
     ports:
@@ -26,10 +30,19 @@ services:
   qdrant:
     image: qdrant/qdrant:v1.12.0
     container_name: qdrant
+    # Только localhost: приложение ходит в Qdrant по внутренней compose-сети
+    # (QDRANT_URL=http://qdrant:6333), а Qdrant без аутентификации, выставленный
+    # наружу, — это чтение и удаление коллекций для кого угодно.
+    # С ноутбука удобнее через туннель: ssh -L 6333:127.0.0.1:6333 user@server
     ports:
-      - "6333:6333"
+      - "127.0.0.1:6333:6333"
     volumes:
       - ./qdrant_data:/qdrant/storage
     networks:
       - mentoring-net
     restart: unless-stopped
+
+volumes:
+  # Именованный том, который монтируется в app (см. services.app.volumes).
+  # Без объявления здесь Compose падает: "refers to undefined volume hf_cache".
+  hf_cache:
