@@ -1,0 +1,8 @@
+{
+  "faithfulness": 0.8472222222222222,
+  "answer_relevancy": 0.9044987281273351,
+  "n_questions": 18,
+  "avg_iterations": 1.9444444444444444,
+  "avg_tool_calls": 0.9444444444444444,
+  "failed_requests": 0
+}

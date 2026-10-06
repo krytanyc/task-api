@@ -12,6 +12,13 @@ class Source(BaseModel):
 
     url: str
     snippet: str = Field(..., description="First ~200 chars of the chunk")
+    full_context: str = Field(
+        ...,
+        description=(
+            "Полный текст чанка. Нужен RAGAS-оценке (Faithfulness): по snippet "
+            "контекст обрезан до 200 символов и метрика систематически занижается."
+        ),
+    )
 
 
 class ChatResponse(BaseModel):

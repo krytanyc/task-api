@@ -31,6 +31,11 @@ class Settings(BaseSettings):
     embedding_model: str = "intfloat/multilingual-e5-small"
     embedding_dim: int = 384
     normalize_embeddings: bool = True
+    # agent (этой недели)
+    max_iterations: int = 5
+    agent_temperature: float = 0.0
+    enable_web_search: bool = True
+    agent_max_output_chars: int = 2000
 
 
 settings = Settings()
